@@ -22,7 +22,7 @@ public:
     // std::vector<cv::KeyPoint>      keypoints_;  // key points in image
     // std::vector<MapPoint*>         map_points_; // associated map points
     bool                           is_key_frame_;  // whether a key-frame
-    vector<MapPoint::Ptr>              mappoint_inframe;
+    vector<shared_ptr<MapPoint>>              mappoint_inframe;
     vector<unsigned long>          mappoint_id;
     
 public: // data members 

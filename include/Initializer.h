@@ -39,7 +39,7 @@ class Initializer
         const std::vector<KeyPoint> keypoints_2,
         const std::vector< DMatch > goodmatches);
 
-    void Initializer::ConstructPoints(const Mono_vo::Map::Ptr &map, 
+    void ConstructPoints(const Mono_vo::Map::Ptr &map, 
         const std::vector<KeyPoint> keypoints_1,
         const std::vector<KeyPoint> keypoints_2,
         const std::vector< DMatch > goodmatches,

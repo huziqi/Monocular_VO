@@ -7,6 +7,8 @@
 
 namespace Mono_vo
 {   
+
+class Frame;
 class MapPoint
 {
 public:
@@ -19,7 +21,7 @@ public:
     Mat         descriptor_; // Descriptor for matching 
     
 
-    vector<Frame::Ptr>              observed_frames_;   // key-frames that can observe this point 
+    vector<shared_ptr<Frame>>              observed_frames_;   // key-frames that can observe this point 
     vector<Point2d>                coordinate_inframe;
     unordered_map<unsigned long, Point2d> pt_2d_inframe;
     
@@ -29,10 +31,10 @@ public:
     MapPoint();
     MapPoint( 
         unsigned long id, 
-        const Vector3d& position, 
-        const Vector3d& norm, 
-        Frame* frame=nullptr, 
-        const Mat& descriptor=Mat() 
+        const Point3d& position, 
+        const Vector3d& norm 
+//        Frame* frame=nullptr, 
+//        const Mat& descriptor=Mat() 
     );
     
     inline cv::Point3f getPositionCV() const {
@@ -41,7 +43,7 @@ public:
     
     static MapPoint::Ptr createMapPoint();
     static MapPoint::Ptr createMapPoint( 
-        const Vector3d& pos_world, 
+        const Point3d& pos_world, 
         const Vector3d& norm_,
         const Mat& descriptor,
         Frame* frame );

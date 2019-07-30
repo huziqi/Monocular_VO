@@ -37,7 +37,6 @@ src/Frame.cpp
 src/Initializer.cpp
 src/Map.cpp
 src/MapPoint.cpp
-src/Visual_odometry.cpp
 src/Config.cpp
 )
 

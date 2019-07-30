@@ -10,11 +10,15 @@ MapPoint::MapPoint()
 {
 }
 
+MapPoint::MapPoint(unsigned long id, const Point3d& position, const Vector3d& norm )
+: id_(id), pos_(position), norm_(norm), good_(true), visible_times_(0), matched_times_(0)
+{
+}
 
 MapPoint::Ptr MapPoint::createMapPoint()
 {
     return MapPoint::Ptr( 
-        new MapPoint( factory_id_++, Vector3d(0,0,0), Vector3d(0,0,0) )
+        new MapPoint( factory_id_++, Point3d(0,0,0), Vector3d(0,0,0) )
     );
 }
 

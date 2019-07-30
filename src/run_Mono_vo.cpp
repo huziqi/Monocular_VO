@@ -71,7 +71,7 @@ int main(int argc, char **argv)
     Mono_vo::Frame::Ptr refframe= Mono_vo::Frame::createFrame();
     Mono_vo::Frame::Ptr curframe= Mono_vo::Frame::createFrame();
     Mono_vo::Frame::Ptr pFrame= Mono_vo::Frame::createFrame();
-    Mono_vo::Map::Ptr Map = new Mono_vo::Map;
+    Mono_vo::Map::Ptr Map = shared_ptr<Mono_vo::Map>(new Mono_vo::Map());
     //pFrame->camera_=camera;
     pFrame->color_=cv::imread(vstrImageFilenames[0],CV_LOAD_IMAGE_UNCHANGED);
     pFrame->time_stamp_=vTimestamps[0];
@@ -169,11 +169,11 @@ int main(int argc, char **argv)
         //triangulation
         Mat T1 = (Mat_<float> (3,4) <<refframe->T_c_w_(0,0), refframe->T_c_w_(0,1), refframe->T_c_w_(0,2), refframe->T_c_w_(0,3),
                                       refframe->T_c_w_(1,0), refframe->T_c_w_(1,1), refframe->T_c_w_(1,2), refframe->T_c_w_(1,3),
-                                      refframe->T_c_w_(2,0), refframe->T_c_w_(2,1), refframe->T_c_w_(2,2), refframe->T_c_w_(2,3),
+                                      refframe->T_c_w_(2,0), refframe->T_c_w_(2,1), refframe->T_c_w_(2,2), refframe->T_c_w_(2,3)
         );
         vector<Point3d> new_pts_3d;
         pts_3d.clear();
-        pose_estimation1.triangulation(T1,keypoints_1,keypoints_2,good_matches,R,t,pts_3d);
+        pose_estimation.triangulation(T1,keypoints_1,keypoints_2,good_matches,R,t,pts_3d);
         for(int i=0;i<pts_3d.size();i++)
         {
             for(auto point:refframe->mappoint_inframe)
@@ -192,16 +192,16 @@ int main(int argc, char **argv)
                 Mono_vo::MapPoint::Ptr mappoint=Mono_vo::MapPoint::createMapPoint();
                 mappoint->pos_=new_pts_3d[i];
                 mappoint->observed_frames_.push_back(refframe);
-                mappoint->coordinate_inframe.push_back(keypoints_1[goodmatches[i].queryIdx].pt);
-                mappoint->pt_2d_inframe[refframe->id_]=keypoints_1[goodmatches[i].queryIdx].pt;
+                mappoint->coordinate_inframe.push_back(keypoints_1[good_matches[i].queryIdx].pt);
+                mappoint->pt_2d_inframe[refframe->id_]=keypoints_1[good_matches[i].queryIdx].pt;
                 mappoint->observed_frames_.push_back(curframe);
-                mappoint->coordinate_inframe.push_back(keypoints_2[goodmatches[i].trainIdx].pt);
-                mappoint->pt_2d_inframe[curframe->id_]=keypoints_2[goodmatches[i].trainIdx].pt;
+                mappoint->coordinate_inframe.push_back(keypoints_2[good_matches[i].trainIdx].pt);
+                mappoint->pt_2d_inframe[curframe->id_]=keypoints_2[good_matches[i].trainIdx].pt;
                 refframe->mappoint_id.push_back(mappoint->factory_id_);
                 refframe->mappoint_inframe.push_back(mappoint);
                 curframe->mappoint_id.push_back(mappoint->factory_id_);
                 curframe->mappoint_inframe.push_back(mappoint);
-                map->insertMapPoint(mappoint);
+                Map->insertMapPoint(mappoint);
             }
         //////////////////
 
@@ -211,11 +211,11 @@ int main(int argc, char **argv)
 
         cout<<ni<<"->"<<ni++<<"Camera_Twc is "<<endl<<Twc<<endl;
         
-        drawMatches ( img_1, keypoints_1, img_2, keypoints_2, good_matches, img_goodmatch );
-        imshow ( "优化后匹配点对", img_goodmatch );
-        drawKeypoints( img_1, keypoints_1, outimg, Scalar::all(-1), DrawMatchesFlags::DEFAULT );
-        imshow("ORB特征点",outimg);
-        waitKey(2);
+//        drawMatches ( img_1, keypoints_1, img_2, keypoints_2, good_matches, img_goodmatch );
+//        imshow ( "优化后匹配点对", img_goodmatch );
+//        drawKeypoints( img_1, keypoints_1, outimg, Scalar::all(-1), DrawMatchesFlags::DEFAULT );
+//        imshow("ORB特征点",outimg);
+//        waitKey(2);
     }
 /*
     //visualization of Pangolin
