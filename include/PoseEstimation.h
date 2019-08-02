@@ -3,6 +3,7 @@
 #include <iostream>
 #include <opencv/cv.h>
 #include <vector>
+#include "Config.h"
 
 using namespace std;
 using namespace cv;
@@ -29,8 +30,15 @@ namespace Mono_vo
         const Mat& R, const Mat& t, 
         vector< Point3d >& points );
 
+        float fx_, fy_, cx_, cy_;
+
     public:
-        PoseEstimation(/* args */){}
+        PoseEstimation(/* args */){
+            fx_ = Config::get<float>("camera.fx");
+            fy_ = Config::get<float>("camera.fy");
+            cx_ = Config::get<float>("camera.cx");
+            cy_ = Config::get<float>("camera.cy");
+        }
         ~PoseEstimation(){}
     };
     

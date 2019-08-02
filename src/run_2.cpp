@@ -1,7 +1,7 @@
 /*Author:Huziqi 
   Date:2019/7/25 */
 
-#include <pangolin/pangolin.h>
+
 #include <sophus/se3.h>
 #include <sophus/so3.h>
 
@@ -11,6 +11,7 @@
 #include <g2o/core/optimization_algorithm_levenberg.h>
 #include <g2o/solvers/csparse/linear_solver_csparse.h>
 #include <g2o/types/sba/types_six_dof_expmap.h>
+#include <opencv2/viz.hpp>
 
 #include "Common_include.h"
 #include "PoseEstimation.h"
@@ -84,7 +85,21 @@ int main(int argc, char **argv)
 
     cv::Mat img, outimg;
     Map->insertKeyFrame(pFrame);
-    
+    Point3d point_begin(0.0, 0.0, 0.0);
+    Point3d point_end;
+    vector<cv::viz::WLine> lines; 
+    //visualization of viz
+    cv::viz::Viz3d vis ( "Visual Odometry" );
+    cv::viz::WCoordinateSystem world_coor ( 1.0 ), camera_coor ( 0.5 );
+    cv::Point3d cam_pos ( 0, -1.0, -1.0 ), cam_focal_point ( 0,0,0 ), cam_y_dir ( 0,1,0 );
+    cv::Affine3d cam_pose = cv::viz::makeCameraPose ( cam_pos, cam_focal_point, cam_y_dir );
+    vis.setViewerPose ( cam_pose );
+
+    world_coor.setRenderingProperty ( cv::viz::LINE_WIDTH, 2.0 );
+    camera_coor.setRenderingProperty ( cv::viz::LINE_WIDTH, 1.0 );
+    vis.showWidget ( "World", world_coor );
+    vis.showWidget ( "Camera", camera_coor );
+
     for(int ni=1; ni<vstrImageFilenames.size(); ni++)
     //for(int ni=1; ni<150;ni++)
     {
@@ -172,18 +187,22 @@ int main(int argc, char **argv)
         cout<<"PNP inliers:"<<num_inliers<<endl;
         SE3 T_c_w_estimated_ = SE3 (
                             SO3 ( r.at<double> ( 0,0 ), r.at<double> ( 1,0 ), r.at<double> ( 2,0 ) ),
-                            Vector3d ( t.at<double> ( 0,0 ), t.at<double> ( 1,0 ), t.at<double> ( 2,0 ) )
+                            Vector3d ( t.at<double> ( 0,0 ), t.at<double> ( 0,1 ), t.at<double> ( 0,2 ) )
                         );
         eigen2cv(Eigen::Matrix3d(T_c_w_estimated_.rotation_matrix()),R);
-        cout<<"R!!!"<<endl;
-        cout<<T_c_w_estimated_.rotation_matrix()<<endl;
-        cout<<endl;
+        // cout<<"R!!!"<<endl;
+        // cout<<T_c_w_estimated_.rotation_matrix()<<endl;
+        // cout<<endl;
         
-        cv::Rodrigues ( r, R ); // r为旋转向量形式，用Rodrigues公式转换为矩阵
-        cout<<"R: "<<endl<<R<<endl;
+        //cv::Rodrigues ( r, R ); // r为旋转向量形式，用Rodrigues公式转换为矩阵
+        //cout<<"R: "<<endl<<R<<endl;
         //use BA optimizer
         Eigen::Matrix4d Twc;
-        bundleAdjustment(pts_3d,pts_2d,K,R,t,Twc,inliers);
+        //bundleAdjustment(pts_3d,pts_2d,K,R,t,Twc,inliers);
+        Twc<<R.at<double>(0,0),R.at<double>(0,1),R.at<double>(0,2),t.at<double>(0,0),
+             R.at<double>(1,0),R.at<double>(1,1),R.at<double>(1,2),t.at<double>(0,1),
+             R.at<double>(2,0),R.at<double>(2,1),R.at<double>(2,2),t.at<double>(0,2),
+             0,                0,                0,                1                ;
 
         curframe->T_c_w_=Twc;
         cout<<"curframe's Twc is :"<<endl;
@@ -202,17 +221,39 @@ int main(int argc, char **argv)
         {
             for(auto point:refframe->mappoint_inframe)
             {
+                if(pts_3d[i].z<=0) continue;
                 if(point->pt_2d_inframe[refframe->id_].x!=keypoints_1[good_matches[i].queryIdx].pt.x&&
                 point->pt_2d_inframe[refframe->id_].y!=keypoints_1[good_matches[i].queryIdx].pt.y)
                 {
-                    Eigen::Vector4d homogeneous_pts_3d<<pts_3d[i].x,pts_3d[i].y,pts_3d[i].z,1;
-                    Eigen::Vector4d world_homogeneous_pts_3d=Twc.inverse()*homogeneous_pts_3d;
-                    
+                    // Eigen::Vector3d pts_3d_;
+                    // pts_3d_<<pts_3d[i].x,pts_3d[i].y,pts_3d[i].z;
+                    // Eigen::Vector3d t;
+                    // Eigen::Matrix3d r;
+                    // t<<refframe->T_c_w_(0,3),refframe->T_c_w_(1,3),refframe->T_c_w_(2,3);
+                    // r<<refframe->T_c_w_(0,0),refframe->T_c_w_(0,1),refframe->T_c_w_(0,2),
+                    //    refframe->T_c_w_(1,0),refframe->T_c_w_(1,1),refframe->T_c_w_(1,2),
+                    //    refframe->T_c_w_(2,0),refframe->T_c_w_(2,1),refframe->T_c_w_(2,2);
+                    // Vector3d world_pts_3d = r.inverse() *(pts_3d_-t);
+                    // Point3d point_3D=Point3d(world_pts_3d[0],world_pts_3d[1],world_pts_3d[2]);
+                    //new_pts_3d.push_back(point_3D);
                     new_pts_3d.push_back(pts_3d[i]);
                     break;
                 }
             }
         }
+        for(int i=0;i<pts_3d.size();i++)
+        {
+            for(auto point:refframe->mappoint_inframe)
+            {
+                if(point->pt_2d_inframe[refframe->id_].x==keypoints_1[good_matches[i].queryIdx].pt.x&&
+                point->pt_2d_inframe[refframe->id_].y==keypoints_1[good_matches[i].queryIdx].pt.y)
+                {
+                    curframe->mappoint_id.push_back(point->factory_id_);
+                    curframe->mappoint_inframe.push_back(point);
+                }
+            }
+        }
+
         cout<<"add new 3D points' size is:"<<new_pts_3d.size()<<endl;
         for(int i=0;i<new_pts_3d.size();i++)
             {
@@ -233,78 +274,41 @@ int main(int argc, char **argv)
         //////////////////
         refframe=curframe;
         
-        drawMatches ( refframe->color_, keypoints_1, curframe->color_, keypoints_2, good_matches, img_goodmatch );
-        imshow ( "优化后匹配点对", img_goodmatch );
-        drawKeypoints( curframe->color_, keypoints_1, outimg, Scalar::all(-1), DrawMatchesFlags::DEFAULT );
-        imshow("ORB特征点",outimg);
-        waitKey(2);
-    }
-
-    //visualization of Pangolin
-    pangolin::CreateWindowAndBind("Mono_VO",1024,768);
-    glEnable(GL_DEPTH_TEST);
-
-    //define menu
-    pangolin::CreatePanel("menu").SetBounds(0.0,1.0,0.0,pangolin::Attach::Pix(175));
-    pangolin::Var<bool> menu("menu.test",true,true);
-    pangolin::Var<bool> menuFollowCamera("menu.Follow Camera",true,true);
-
-    // Define Projection and initial ModelView matrix
-    pangolin::OpenGlRenderState s_cam(
-        pangolin::ProjectionMatrix(1024,768,500,500,512,389,0.1,1000),
-        pangolin::ModelViewLookAt(0,-0.7,-1.8, 0,0,0, pangolin::AxisY)
-    );
-
-    // Create Interactive View in window
-    pangolin::Handler3D handler(s_cam);
-    pangolin::View& d_cam = pangolin::CreateDisplay()
-            .SetBounds(0.0, 1.0, pangolin::Attach::Pix(175), 1.0, -1024.0f/768.0f)
-            .SetHandler(new pangolin::Handler3D(s_cam));
-    pangolin::GlTexture imageTexture(640,480,GL_RGB,false,0,GL_BGR,GL_UNSIGNED_BYTE);
-
-    bool bFollow=true;
-    pangolin::OpenGlMatrix T;
-    T.SetIdentity();
-
-    while( !pangolin::ShouldQuit() )
-    {
-        if(menuFollowCamera && bFollow)
-        {
-            s_cam.Follow(T);
-        }
-        else if(menuFollowCamera && !bFollow)
-        {
-            s_cam.SetModelViewMatrix(pangolin::ModelViewLookAt(0,-0.7,-1.8, 0,0,0,0.0,-1.0, 0.0));
-            s_cam.Follow(T);
-            bFollow = true;
-        }
-        else if(!menuFollowCamera && bFollow)
-        {
-            bFollow = false;
-        }
-        d_cam.Activate(s_cam);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
-        vector<Point3d> Points3D;
-        vector<Eigen::Matrix4d> Twc_;
-        for(auto points:Map->map_points_)
-        {
-            Points3D.push_back(points.second->pos_);        
-        }
-        for(auto frame:Map->keyframes_)
-        {
-            Twc_.push_back(frame.second->T_c_w_);
-        }
-        DrawPoints(Points3D);
-        DrawFrames(Twc_);
         
-        pangolin::FinishFrame();
 
-        usleep(500);
+        cv::Affine3d M (
+                cv::Affine3d::Mat3 (
+                    Twc( 0,0 ), Twc( 0,1 ), Twc( 0,2 ),
+                    Twc( 1,0 ), Twc( 1,1 ), Twc( 1,2 ),
+                    Twc( 2,0 ), Twc( 2,1 ), Twc( 2,2 )
+                ),
+                cv::Affine3d::Vec3 (
+                    Twc( 0,3 ), Twc( 1,3 ), Twc( 2,3 )
+                )
+            );
+        point_end = Point3d(Twc(0, 3),Twc(1, 3),Twc(2, 3));
+        viz::WLine line(point_begin, point_end, cv::viz::Color::green());
+        lines.push_back(line);
+        int j=0;
+        for (vector<cv::viz::WLine>::iterator iter = lines.begin(); iter != lines.end(); iter++)
+         {
+             string id = to_string(j);
+             vis.showWidget(id, *iter);
+             j++;
+         }
+        point_begin = point_end; // 更新 起始点
+        //drawMatches ( refframe->color_, keypoints_1, curframe->color_, keypoints_2, good_matches, img_goodmatch );
+        //imshow ( "优化后匹配点对", img_goodmatch );
+        //drawKeypoints( curframe->color_, keypoints_1, outimg, Scalar::all(-1), DrawMatchesFlags::DEFAULT );
+        //imshow("ORB特征点",outimg);
+        //waitKey(1);
+        vis.setWidgetPose ( "Camera", M );
+        vis.spinOnce ( 1500, false );
+        //waitKey(1);
+        //system("sleep 2s");
+        cout << endl;
+        //////////////////////////////////
     }
- 
-    //////////////////////////////////
-
 
     return 0;
 }
@@ -355,50 +359,50 @@ void Goodmatches(vector<DMatch> &matches, vector<DMatch> &good_matches)
     }
 }
 
-void DrawPoints(vector< Point3d >& points){
-    glPointSize(5.0f);
-    glBegin(GL_POINTS);
-    for(size_t i = 0;i<points.size();++i){
-        glColor3d(0,0,0);
-        // glColor3f(float(cloud->points[i].r)/255,float( cloud->points[i].g)/255,float(cloud->points[i].b)/255);
-        glVertex3d(points[i].x,points[i].y,points[i].z);
-    }
-    glEnd();
-}
-void DrawFrames(vector<Eigen::Matrix4d>& Twc){
-    const float w = 0.08; //0.01
-    const float h = w * 0.75f;
-    const float z = w * 0.6f;
+// void DrawPoints(vector< Point3d >& points){
+//     glPointSize(5.0f);
+//     glBegin(GL_POINTS);
+//     for(size_t i = 0;i<points.size();++i){
+//         glColor3d(0,0,0);
+//         // glColor3f(float(cloud->points[i].r)/255,float( cloud->points[i].g)/255,float(cloud->points[i].b)/255);
+//         glVertex3d(points[i].x,points[i].y,points[i].z);
+//     }
+//     glEnd();
+// }
+// void DrawFrames(vector<Eigen::Matrix4d>& Twc){
+//     const float w = 0.08; //0.01
+//     const float h = w * 0.75f;
+//     const float z = w * 0.6f;
 
-    for(int i=0;i<Twc.size();i++)
-    {
+//     for(int i=0;i<Twc.size();i++)
+//     {
         
-        glPushMatrix();
-        //glMultMatrixd(Twc[i].matrix().data());
-        glMultMatrixd(Twc[i].data());
-        glColor3d(0, (1 - 0), 0);
-        glLineWidth(2.0f);
-        glBegin(GL_LINES);
-        glVertex3f(0, 0, 0);
-        glVertex3f(w, h, z);
-        glVertex3f(0, 0, 0);
-        glVertex3f(w, -h, z);
-        glVertex3f(0, 0, 0);
-        glVertex3f(-w, -h, z);
-        glVertex3f(0, 0, 0);
-        glVertex3f(-w, h, z);
-        glVertex3f(w, h, z);
-        glVertex3f(w, -h, z);
-        glVertex3f(-w, h, z);
-        glVertex3f(-w, -h, z);
-        glVertex3f(-w, h, z);
-        glVertex3f(w, h, z);
-        glVertex3f(-w, -h, z);
-        glVertex3f(w, -h, z);
-        glEnd();
-        glPopMatrix();
-    }
-}
+//         glPushMatrix();
+//         //glMultMatrixd(Twc[i].matrix().data());
+//         glMultMatrixd(Twc[i].data());
+//         glColor3d(0, (1 - 0), 0);
+//         glLineWidth(2.0f);
+//         glBegin(GL_LINES);
+//         glVertex3f(0, 0, 0);
+//         glVertex3f(w, h, z);
+//         glVertex3f(0, 0, 0);
+//         glVertex3f(w, -h, z);
+//         glVertex3f(0, 0, 0);
+//         glVertex3f(-w, -h, z);
+//         glVertex3f(0, 0, 0);
+//         glVertex3f(-w, h, z);
+//         glVertex3f(w, h, z);
+//         glVertex3f(w, -h, z);
+//         glVertex3f(-w, h, z);
+//         glVertex3f(-w, -h, z);
+//         glVertex3f(-w, h, z);
+//         glVertex3f(w, h, z);
+//         glVertex3f(-w, -h, z);
+//         glVertex3f(w, -h, z);
+//         glEnd();
+//         glPopMatrix();
+//     }
+// }
 
 void bundleAdjustment (
     const vector< Point3d > points_3d,

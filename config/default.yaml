@@ -4,17 +4,17 @@
 dataset_dir: /home/huziqi/database/RGB-D/rgbd_dataset_freiburg1_xyz/
 
 # camera intrinsics
-# fr1
-camera.fx: 517.3
-camera.fy: 516.5
-camera.cx: 325.1
-camera.cy: 249.7
+# TUM
+#camera.fx: 535.4
+#camera.fy: 539.2
+#camera.cx: 320.1
+#camera.cy: 247.6
 
-# fr2
-#camera.fx: 520.9
-#camera.fy: 521.0
-#camera.cx: 325.1
-#camera.cy: 249.7
+# KITTI
+camera.fx: 718.856
+camera.fy: 718.856
+camera.cx: 607.1928
+camera.cy: 185.2157
 
 camera.depth_scale: 5000
 

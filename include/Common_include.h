@@ -8,6 +8,10 @@ using Eigen::Vector2d;
 using Eigen::Vector3d;
 
 #include <opencv2/core/core.hpp>
+#include <opencv2/core/eigen.hpp>
+#include <opencv2/features2d/features2d.hpp>
+#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/calib3d/calib3d.hpp>
 using namespace cv;
 
 #include <vector>
@@ -18,6 +22,15 @@ using namespace cv;
 #include <set>
 #include <unordered_map>
 #include <map>
+#include <iomanip>
+#include <algorithm>
+#include <ctime>
+
+
+
+
+
+
 
 using namespace std;
 #endif

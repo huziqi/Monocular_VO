@@ -5,7 +5,6 @@ namespace Mono_vo
 
 void Map::insertKeyFrame ( Frame::Ptr frame )
 {
-    cout<<"Key frame size = "<<keyframes_.size()<<endl;
     if ( keyframes_.find(frame->id_) == keyframes_.end() )
     {
         keyframes_.insert( make_pair(frame->id_, frame) );
@@ -14,6 +13,8 @@ void Map::insertKeyFrame ( Frame::Ptr frame )
     {
         keyframes_[ frame->id_ ] = frame;
     }
+    cout<<"Key frame size = "<<keyframes_.size()<<endl;
+
 }
 
 void Map::insertMapPoint ( MapPoint::Ptr map_point )

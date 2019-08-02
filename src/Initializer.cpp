@@ -37,6 +37,8 @@ namespace Mono_vo
         double Rh;
         Sf=ComputeFundamental(keypoints_1,keypoints_2,goodmatches);
         Sh=ComputeHomograph(keypoints_1,keypoints_2,goodmatches);
+        cout<<"fundamental score: "<<Sf<<endl;
+        cout<<"homograph score  : "<<Sh<<endl;
         Rh=Sh/(Sh+Sf);
         if(Rh>0.45) return false;
         else
@@ -163,6 +165,7 @@ namespace Mono_vo
         double score = 0;
 
         const double th = 5.991;
+        //const double th = 3.841;
 
         const double invSigmaSquare = 1.0/(sigma*sigma);
 
@@ -216,6 +219,8 @@ namespace Mono_vo
         const Mono_vo::Frame::Ptr& refframe,
         const Mono_vo::Frame::Ptr& curframe)
         {
+            //cout<<"into the ConstructPoints function!!!!!!!!"<<endl;
+            //cout<<endl;
             vector<Point3d> pts_3d;
             vector<Point2d> pts_2d;
             Mat R,t;
@@ -229,27 +234,28 @@ namespace Mono_vo
             pose_estimation1.pose_estimation_2d2d(keypoints_1,keypoints_2,goodmatches,R,t);
             pose_estimation1.triangulation(T1,keypoints_1,keypoints_2,goodmatches,R,t,pts_3d);
             //draw_Points_3D.insert(Points_3D.end(),pts_3d.begin(),pts_3d.end());
-
+            //cout<<"finishing extracting features and tirangulation!!"<<endl;
+            //cout<<endl;
+            cout<<"pts_3d size is: "<<pts_3d.size()<<endl;
+            cout<<endl;
             for(int i=0;i<pts_3d.size();i++)
             {
                 Mono_vo::MapPoint::Ptr mappoint=Mono_vo::MapPoint::createMapPoint();
                 mappoint->pos_=pts_3d[i];
                 mappoint->observed_frames_.push_back(refframe);
+                mappoint->observed_frames_.push_back(curframe);
                 mappoint->coordinate_inframe.push_back(keypoints_1[goodmatches[i].queryIdx].pt);
+                mappoint->coordinate_inframe.push_back(keypoints_2[goodmatches[i].trainIdx].pt);
                 mappoint->pt_2d_inframe[refframe->id_]=keypoints_1[goodmatches[i].queryIdx].pt;
+                mappoint->pt_2d_inframe[curframe->id_]=keypoints_2[goodmatches[i].trainIdx].pt;
                 refframe->mappoint_id.push_back(mappoint->factory_id_);
+                curframe->mappoint_id.push_back(mappoint->factory_id_);
                 refframe->mappoint_inframe.push_back(mappoint);
+                curframe->mappoint_inframe.push_back(mappoint);
                 map->insertMapPoint(mappoint);
             }
-
-            for(int i=0;i<pts_3d.size();i++)
-            {
-                map->map_points_[i++]->observed_frames_.push_back(curframe);
-                map->map_points_[i++]->coordinate_inframe.push_back(keypoints_2[goodmatches[i].trainIdx].pt);
-                map->map_points_[i++]->pt_2d_inframe[curframe->id_]=keypoints_2[goodmatches[i].trainIdx].pt;
-                curframe->mappoint_id.push_back(map->map_points_[i++]->factory_id_);
-                curframe->mappoint_inframe.push_back(map->map_points_[i++]);
-            }
+            cout<<"successfully create first group of 3D points!!!"<<endl;
+            cout<<endl;
 
             Eigen::Matrix4d Twc;       
              Twc << R.at<double>(0,0), R.at<double>(0,1), R.at<double>(0,2), t.at<double>(0,0),
@@ -257,7 +263,8 @@ namespace Mono_vo
                     R.at<double>(2,0), R.at<double>(2,1), R.at<double>(2,2), t.at<double>(0,2),
                     0                , 0                , 0                , 1                ; 
             curframe->T_c_w_=Twc;
-            map->insertKeyFrame(refframe);
             map->insertKeyFrame(curframe);
+            cout<<"insert mappoints into map!!!"<<endl;
+            cout<<endl;
         }
 }

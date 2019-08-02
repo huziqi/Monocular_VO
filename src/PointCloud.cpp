@@ -6,9 +6,12 @@
 #include <pangolin/pangolin.h>
 #include <eigen3/Eigen/Core>
 #include <mutex>
+
+#include "ORBextractor.h"
 // #include "extra.h" // used in opencv2 
 using namespace std;
 using namespace cv;
+using namespace Mono_vo;
 
 void find_feature_matches (
     const Mat& img_1, const Mat& img_2,
@@ -135,6 +138,11 @@ int main ( int argc, char** argv )
     T.SetIdentity();
 
     bool bFollow=true;
+    Mat img_goodmatch, outimg;
+    drawMatches ( img_1, keypoints_1, img_2, keypoints_2, matches, img_goodmatch );
+    imshow ( "优化后匹配点对", img_goodmatch );
+    
+    waitKey(0);
 
     while( !pangolin::ShouldQuit() )
     {
@@ -165,7 +173,7 @@ int main ( int argc, char** argv )
     
     
     //-- 验证三角化点与特征点的重投影关系
-    Mat K = ( Mat_<double> ( 3,3 ) << 520.9, 0, 325.1, 0, 521.0, 249.7, 0, 0, 1 );
+    Mat K = ( Mat_<double> ( 3,3 ) << 535.4, 0, 539.2, 0, 320.1, 247.6, 0, 0, 1 );
     for ( int i=0; i<matches.size(); i++ )
     {
         Point2d pt1_cam = pixel2cam( keypoints_1[ matches[i].queryIdx ].pt, K );
@@ -198,24 +206,34 @@ void find_feature_matches ( const Mat& img_1, const Mat& img_2,
     //-- 初始化
     Mat descriptors_1, descriptors_2;
     // used in OpenCV3 
-    Ptr<FeatureDetector> detector = ORB::create();
-    Ptr<DescriptorExtractor> descriptor = ORB::create();
+    //Ptr<FeatureDetector> detector = ORB::create();
+    //Ptr<DescriptorExtractor> descriptor = ORB::create();
+
+    Mono_vo::ORBextractor extractor(1000,1.2,8,20,7);
+    
+    
+    
+    extractor(img_1,cv::Mat(),keypoints_1,descriptors_1);
+    extractor(img_2,cv::Mat(),keypoints_2,descriptors_2);
+
     // use this if you are in OpenCV2 
     // Ptr<FeatureDetector> detector = FeatureDetector::create ( "ORB" );
     // Ptr<DescriptorExtractor> descriptor = DescriptorExtractor::create ( "ORB" );
-    Ptr<DescriptorMatcher> matcher  = DescriptorMatcher::create("BruteForce-Hamming");
+    //Ptr<DescriptorMatcher> matcher  = DescriptorMatcher::create("BruteForce-Hamming");
+    cv::FlannBasedMatcher   matcher_flann_(new cv::flann::LshIndexParams ( 5,10,2 ));
     //-- 第一步:检测 Oriented FAST 角点位置
-    detector->detect ( img_1,keypoints_1 );
-    detector->detect ( img_2,keypoints_2 );
+    //detector->detect ( img_1,keypoints_1 );
+    //detector->detect ( img_2,keypoints_2 );
 
     //-- 第二步:根据角点位置计算 BRIEF 描述子
-    descriptor->compute ( img_1, keypoints_1, descriptors_1 );
-    descriptor->compute ( img_2, keypoints_2, descriptors_2 );
+    //descriptor->compute ( img_1, keypoints_1, descriptors_1 );
+    //descriptor->compute ( img_2, keypoints_2, descriptors_2 );
 
     //-- 第三步:对两幅图像中的BRIEF描述子进行匹配，使用 Hamming 距离
     vector<DMatch> match;
    // BFMatcher matcher ( NORM_HAMMING );
-    matcher->match ( descriptors_1, descriptors_2, match );
+    //matcher->match ( descriptors_1, descriptors_2, match );
+    matcher_flann_.match(descriptors_1,descriptors_2,match);
 
     //-- 第四步:匹配点对筛选
     double min_dist=10000, max_dist=0;
@@ -248,7 +266,8 @@ void pose_estimation_2d2d (
     Mat& R, Mat& t )
 {
     // 相机内参,TUM Freiburg2
-    Mat K = ( Mat_<double> ( 3,3 ) << 520.9, 0, 325.1, 0, 521.0, 249.7, 0, 0, 1 );
+    Mat K = ( Mat_<double> ( 3,3 ) << 535.4, 0, 539.2, 0, 320.1, 247.6, 0, 0, 1 );
+
 
     //-- 把匹配点转换为vector<Point2f>的形式
     vector<Point2f> points1;
@@ -266,8 +285,8 @@ void pose_estimation_2d2d (
     cout<<"fundamental_matrix is "<<endl<< fundamental_matrix<<endl;
 
     //-- 计算本质矩阵
-    Point2d principal_point ( 325.1, 249.7 );				//相机主点, TUM dataset标定值
-    int focal_length = 521;						//相机焦距, TUM dataset标定值
+    Point2d principal_point ( 320.1, 247.6 );				//相机主点, TUM dataset标定值
+    int focal_length = 535.4;						//相机焦距, TUM dataset标定值
     Mat essential_matrix;
     essential_matrix = findEssentialMat ( points1, points2, focal_length, principal_point );
     cout<<"essential_matrix is "<<endl<< essential_matrix<<endl;
@@ -300,7 +319,7 @@ void triangulation (
         R.at<double>(2,0), R.at<double>(2,1), R.at<double>(2,2), t.at<double>(2,0)
     );
     
-    Mat K = ( Mat_<double> ( 3,3 ) << 520.9, 0, 325.1, 0, 521.0, 249.7, 0, 0, 1 );
+    Mat K = ( Mat_<double> ( 3,3 ) << 535.4, 0, 539.2, 0, 320.1, 247.6, 0, 0, 1 );
     vector<Point2f> pts_1, pts_2;
     for ( DMatch m:matches )
     {
