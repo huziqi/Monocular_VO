@@ -83,9 +83,8 @@ How to complie
 ----------  
 Make sure you have already settled your environment following above instrction. The tutorial for Monocular VO can also refer to:  
 * https://gitee.com/paopaoslam/ORB-SLAM2
-* http://www.fengbing.net/  
-About C++ grammer can refer to:  
-* https://zh.cppreference.com/w/  
+* http://www.fengbing.net/
+About C++ grammer can refer to:* https://zh.cppreference.com/w/  
 Git clone to your workspace,and excute:   
 
     cd ~/Monocular_vo/
